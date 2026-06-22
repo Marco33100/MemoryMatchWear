@@ -1,11 +1,7 @@
 package mx.utng.mamr.memorymatch.data.repository
 
 import mx.utng.mamr.memorymatch.data.datasource.BestTimeDataSource
-
-interface BestTimeRepository {
-    suspend fun getBestTime(): Long
-    suspend fun saveBestTime(seconds: Long)
-}
+import mx.utng.mamr.memorymatch.domain.repository.BestTimeRepository
 
 // data/repository/BestTimeRepositoryImpl.kt
 class BestTimeRepositoryImpl(private val ds: BestTimeDataSource) : BestTimeRepository {
