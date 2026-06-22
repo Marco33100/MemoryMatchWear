@@ -1,2 +1,6 @@
 package mx.utng.mamr.memorymatch.domain.repository
 
+interface BestTimeRepository {
+    suspend fun getBestTime(): Long
+    suspend fun saveBestTime(seconds: Long)
+}

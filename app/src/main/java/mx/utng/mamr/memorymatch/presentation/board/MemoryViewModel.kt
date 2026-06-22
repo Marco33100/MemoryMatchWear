@@ -4,18 +4,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import mx.utng.mamr.memorymatch.domain.model.GamePhase
 import mx.utng.mamr.memorymatch.domain.model.GameState
-import mx.utng.mamr.memorymatch.domain.usecase.CheckMatchUseCase
-import mx.utng.mamr.memorymatch.domain.usecase.FlipCardUseCase
-import mx.utng.mamr.memorymatch.domain.usecase.ShuffleBoardUseCase
+import mx.utng.mamr.memorymatch.domain.usecase.*
 
 class MemoryViewModel(
     private val shuffleBoard  : ShuffleBoardUseCase,
@@ -28,7 +23,6 @@ class MemoryViewModel(
     private val _state = MutableStateFlow(GameState())
     val state: StateFlow<GameState> = _state.asStateFlow()
 
-    // Canal de efectos de una sola vez (haptics, sonido)
     private val _effects = Channel<GameEffect>(Channel.BUFFERED)
     val effects: Flow<GameEffect> = _effects.receiveAsFlow()
 
@@ -40,30 +34,21 @@ class MemoryViewModel(
         timerJob?.cancel()
         val board = shuffleBoard()
         val bestTime = runBlocking { getBestTime() }
-        _state.value = GameState(
-            board = board,
-            phase = GamePhase.SELECTING_FIRST,
-            bestTime = bestTime
-        )
+        _state.value = GameState(board = board, phase = GamePhase.SELECTING_FIRST, bestTime = bestTime)
         startTimer()
     }
 
     fun onCardTapped(cardIndex: Int) {
         val current = _state.value
         if (current.phase == GamePhase.CHECKING || current.phase == GamePhase.WON) return
-
         val afterFlip = flipCard(current, cardIndex)
         _state.value = afterFlip
-
-        // Solo evaluar si ya hay 2 tarjetas
-        if (afterFlip.phase == GamePhase.CHECKING) {
-            evaluateMatch(afterFlip)
-        }
+        if (afterFlip.phase == GamePhase.CHECKING) evaluateMatch(afterFlip)
     }
 
     private fun evaluateMatch(state: GameState) {
         viewModelScope.launch {
-            delay(800L)  // pausa para que el jugador vea las tarjetas
+            delay(800L)
             when (checkMatch(state)) {
                 MatchResult.HIT -> {
                     val newState = applyMatch(state)
@@ -87,12 +72,11 @@ class MemoryViewModel(
             if (i == first || i == second) card.copy(isMatched = true) else card
         }
         return state.copy(
-            board          = newBoard,
-            matchesFound   = state.matchesFound + 1,
-            firstSelected  = null,
+            board = newBoard,
+            matchesFound = state.matchesFound + 1,
+            firstSelected = null,
             secondSelected = null,
-            phase          = if (state.matchesFound + 1 == GameState.TOTAL_PAIRS)
-                GamePhase.WON else GamePhase.SELECTING_FIRST
+            phase = if (state.matchesFound + 1 == GameState.TOTAL_PAIRS) GamePhase.WON else GamePhase.SELECTING_FIRST
         )
     }
 
@@ -102,8 +86,7 @@ class MemoryViewModel(
         val newBoard = state.board.mapIndexed { i, c ->
             if (i == first || i == second) c.copy(isFlipped = false) else c
         }
-        return state.copy(board=newBoard, firstSelected=null,
-            secondSelected=null, phase=GamePhase.SELECTING_FIRST)
+        return state.copy(board=newBoard, firstSelected=null, secondSelected=null, phase=GamePhase.SELECTING_FIRST)
     }
 
     private fun startTimer() {
